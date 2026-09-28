@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Quotation → Sales Order Import</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+:root{
+  --bg:#f4f1ea; --paper:#fffdf8; --ink:#1d2320; --muted:#6b716c; --rule:#d9d3c5;
+  --accent:#1f6b52; --accent-ink:#fff; --warn:#a4462b; --row:#f7f4ec;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#151816; --paper:#1d211f; --ink:#e7e4dc; --muted:#9aa19b; --rule:#343a36;
+    --accent:#4fb28c; --accent-ink:#0f1411; --warn:#e38b6d; --row:#232825;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#151816; --paper:#1d211f; --ink:#e7e4dc; --muted:#9aa19b; --rule:#343a36;
+  --accent:#4fb28c; --accent-ink:#0f1411; --warn:#e38b6d; --row:#232825;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
+.wrap{max-width:860px;margin:0 auto;padding:32px 20px 60px}
+header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+h1{font:600 22px/1.2 "IBM Plex Mono",ui-monospace,monospace;margin:0;letter-spacing:-.01em}
+h1 span{color:var(--accent)}
+.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
+.drop{border:1.5px dashed var(--rule);background:var(--paper);border-radius:6px;padding:34px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
+.drop:hover,.drop.over{border-color:var(--accent)}
+.drop strong{font-family:"IBM Plex Mono",monospace;font-weight:500}
+.drop small{display:block;color:var(--muted);margin-top:6px}
+input[type=file]{display:none}
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:6px;margin-top:22px}
+.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border-bottom:1px solid var(--rule)}
+.meta div{padding:12px 16px;border-right:1px solid var(--rule)}
+.meta div:last-child{border-right:0}
+.meta label{display:block;font:500 11px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+.meta span{font-family:"IBM Plex Mono",monospace;font-size:14px;word-break:break-word}
+.opts{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule);font-size:13px}
+.opts input[type=text]{width:70px}
+.scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13.5px}
+th{font:500 11px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
+td{padding:6px 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tr:nth-child(even) td{background:var(--row)}
+tr.off td{opacity:.4}
+td.desc{color:var(--muted);min-width:200px}
+td.num{text-align:right;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+input.cell,.opts input[type=text]{font:14px "IBM Plex Mono",monospace;color:var(--ink);background:transparent;border:1px solid transparent;border-bottom-color:var(--rule);padding:3px 4px;border-radius:2px;width:100%;min-width:60px}
+input.cell:focus,.opts input[type=text]:focus{outline:none;border-color:var(--accent)}
+input.qty{width:70px}
+.foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px}
+.total{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted)}
+.total b{color:var(--ink)}
+.total .bad{color:var(--warn)}
+button{font:500 14px "IBM Plex Sans",sans-serif;border:0;border-radius:4px;padding:10px 18px;cursor:pointer}
+.primary{background:var(--accent);color:var(--accent-ink)}
+.primary:disabled{opacity:.5;cursor:default}
+.ghost{background:transparent;color:var(--muted);border:1px solid var(--rule)}
+.msg{margin-top:14px;font-size:13px;min-height:1.2em}
+.msg.err{color:var(--warn)}
+.hidden{display:none}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <h1>Quotation <span>→</span> Sales Order Import</h1>
+      <p class="sub">Upload a ProPharma / PSMS quotation PDF. Get the Productcode · Quantity · Piority sheet.</p>
+    </div>
+  </header>
+
+  <label class="drop" id="drop">
+    <input type="file" id="file" accept="application/pdf">
+    <strong>Drop quotation PDF here</strong>
+    <small>or tap to choose a file — it's read in your browser, nothing is uploaded</small>
+  </label>
+  <div class="msg" id="msg"></div>
+
+  <section class="card hidden" id="result">
+    <div class="meta">
+      <div><label>Quotation no.</label><span id="mNo">—</span></div>
+      <div><label>Date</label><span id="mDate">—</span></div>
+      <div><label>Subject</label><span id="mSubj">—</span></div>
+    </div>
+    <div class="opts">
+      <label><input type="checkbox" id="incService"> Include SERVICE / freight lines</label>
+      <label>Priority for all rows: <input type="text" id="prioAll" placeholder="blank"></label>
+      <button class="ghost" id="applyPrio" type="button">Apply</button>
+    </div>
+    <div class="scroll">
+      <table>
+        <thead><tr><th></th><th>Productcode</th><th>Description</th><th>Quantity</th><th>Piority</th><th style="text-align:right">Amount</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+    </div>
+    <div class="foot">
+      <div class="total" id="total"></div>
+      <button class="primary" id="dl" type="button">Download Excel</button>
+    </div>
+  </section>
+</div>
+
+<script>
+pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
+
+const $ = id => document.getElementById(id);
+let items = [], meta = {};
+
+
+const num = s => parseFloat(String(s).replace(/,/g, "")) || 0;
+const fmt = n => n.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+async function pdfLines(buf) {
+  const pdf = await pdfjsLib.getDocument({data: buf}).promise;
+  const lines = [];
+  for (let p = 1; p <= pdf.numPages; p++) {
+    const tc = await (await pdf.getPage(p)).getTextContent();
+    const rows = [];
+    for (const it of tc.items) {
+      if (!it.str.trim()) continue;
+      const y = it.transform[5], x = it.transform[4];
+      let row = rows.find(r => Math.abs(r.y - y) < 3);
+      if (!row) { row = {y, parts: []}; rows.push(row); }
+      row.parts.push({x, s: it.str});
+    }
+    rows.sort((a, b) => b.y - a.y);
+    for (const r of rows) lines.push(r.parts.sort((a, b) => a.x - b.x).map(q => q.s.trim()).join(" ").replace(/\s+/g, " ").trim());
+  }
+  return lines;
+}
+
+function parse(lines) {
+  const m = {};
+  const lineRe = /^(\S+)\s+(.*?)\s+(-?[\d,]+(?:\.\d+)?)\s+(-?[\d,]+(?:\.\d+)?)\s+(-?[\d,]+(?:\.\d+)?)$/;
+  const out = [];
+  let inTable = false, last = null;
+  for (let i = 0; i < lines.length; i++) {
+    const l = lines[i];
+    let mm;
+    if ((mm = l.match(/QUOTATION NO\.?\s*([A-Z0-9\/\-]+)/i))) m.no = mm[1];
+    if ((mm = l.match(/DATE\s+(\d{1,2}[\/\-.]\d{1,2}[\/\-.]\d{2,4})/i))) m.date = mm[1];
+    if (/^SUBJECT$/i.test(l) && lines[i+1]) m.subject = lines[i+1];
+    if ((mm = l.match(/TOTAL\s+([A-Z]{3})\s*([\d,]+\.\d+)/))) { m.currency = mm[1]; m.total = num(mm[2]); }
+    if (/^CODE\s+DESCRIPTION/i.test(l)) { inTable = true; last = null; continue; }
+    if (!inTable) continue;
+    if (/^(PREPARED BY|TOTAL\b|SUB ?TOTAL|Accepted By)/i.test(l)) { inTable = false; continue; }
+    const r = l.match(lineRe);
+    if (r) {
+      last = {code: r[1], desc: r[2], qty: num(r[3]), rate: num(r[4]), amount: num(r[5]), prio: ""};
+      last.service = !/\d/.test(last.code) || /^SERVICE$/i.test(last.code);
+      last.on = !last.service;
+      out.push(last);
+    } else if (last) {
+      last.desc += " " + l; // wrapped description line
+    }
+  }
+  return {meta: m, items: out};
+}
+
+function render() {
+  $("mNo").textContent = meta.no || "—";
+  $("mDate").textContent = meta.date || "—";
+  $("mSubj").textContent = meta.subject || "—";
+  const tb = $("rows"); tb.innerHTML = "";
+  items.forEach((it, i) => {
+    const tr = document.createElement("tr");
+    if (!it.on) tr.className = "off";
+    tr.innerHTML = `<td><input type="checkbox" ${it.on ? "checked" : ""} data-k="on"></td>
+      <td><input class="cell" data-k="code"></td>
+      <td class="desc"></td>
+      <td><input class="cell qty" inputmode="decimal" data-k="qty"></td>
+      <td><input class="cell qty" data-k="prio"></td>
+      <td class="num">${fmt(it.amount)}</td>`;
+    tr.querySelector('[data-k=code]').value = it.code;
+    tr.querySelector('[data-k=qty]').value = it.qty;
+    tr.querySelector('[data-k=prio]').value = it.prio;
+    tr.querySelector('.desc').textContent = it.desc;
+    tr.querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => {
+      const k = inp.dataset.k;
+      if (k === "on") { it.on = inp.checked; tr.className = it.on ? "" : "off"; summary(); }
+      else if (k === "qty") it.qty = num(inp.value);
+      else it[k] = inp.value.trim();
+    }));
+    tb.appendChild(tr);
+  });
+  $("incService").checked = items.some(x => x.service && x.on);
+  summary();
+  $("result").classList.remove("hidden");
+}
+
+function summary() {
+  const sum = items.reduce((s, x) => s + x.amount, 0);
+  const n = items.filter(x => x.on).length;
+  let t = `<b>${n}</b> row${n === 1 ? "" : "s"} to export · lines total <b>${fmt(sum)}</b>`;
+  if (meta.total != null) {
+    const ok = Math.abs(sum - meta.total) < 0.05;
+    t += ` · PDF total ${meta.currency || ""} <b class="${ok ? "" : "bad"}">${fmt(meta.total)}</b> ${ok ? "✓" : "— mismatch, check lines"}`;
+  }
+  $("total").innerHTML = t;
+  $("dl").disabled = n === 0;
+}
+
+async function handle(file) {
+  const msg = $("msg"); msg.className = "msg"; msg.textContent = "Reading " + file.name + "…";
+  try {
+    const lines = await pdfLines(await file.arrayBuffer());
+    const res = parse(lines);
+    if (!res.items.length) throw new Error("No item lines found. Is this a quotation with a CODE / DESCRIPTION / QTY / RATE / AMOUNT table?");
+    meta = res.meta; meta.file = file.name; items = res.items;
+    render();
+    msg.textContent = `Found ${items.length} line${items.length === 1 ? "" : "s"} in ${file.name}.`;
+  } catch (e) {
+    msg.className = "msg err"; msg.textContent = e.message || String(e);
+    $("result").classList.add("hidden");
+  }
+}
+
+$("file").addEventListener("change", e => { if (e.target.files[0]) handle(e.target.files[0]); e.target.value = ""; });
+const drop = $("drop");
+["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
+["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
+drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) handle(f); });
+
+$("incService").addEventListener("change", e => {
+  items.forEach(x => { if (x.service) x.on = e.target.checked; });
+  render();
+});
+$("applyPrio").addEventListener("click", () => {
+  const v = $("prioAll").value.trim();
+  items.forEach(x => x.prio = v);
+  render();
+});
+
+$("dl").addEventListener("click", async () => {
+  const rows = [["Productcode", "Quantity", "Piority"]];
+  items.filter(x => x.on).forEach(x => {
+    const code = /^\d+$/.test(x.code) ? Number(x.code) : x.code;
+    const p = x.prio === "" ? null : (/^-?\d+(\.\d+)?$/.test(x.prio) ? Number(x.prio) : x.prio);
+    rows.push([code, x.qty, p]);
+  });
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws["!cols"] = [{wch: 14}, {wch: 10}, {wch: 10}];
+  const wb = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(wb, ws, "Sheet1");
+  const buf = XLSX.write(wb, {bookType: "xlsx", type: "array"});
+  const tag = (meta.no || meta.file || "quotation").replace(/\.pdf$/i, "").replace(/[\/\\:*?"<>|\s]+/g, "-");
+  const filename = `Sales_Order_Import_${tag}.xlsx`;
+  const blob = new Blob([buf], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
+  const msg = $("msg"); msg.className = "msg";
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob); a.download = filename;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+    msg.textContent = "Downloaded " + filename;
+});
+</script>
+</body>
+</html>
