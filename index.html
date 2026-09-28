@@ -3,87 +3,155 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>Quotation → Sales Order Import</title>
+<title>Quotation → Sales Order Import · PSMS</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📑</text></svg>">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
 :root{
-  --bg:#f4f1ea; --paper:#fffdf8; --ink:#1d2320; --muted:#6b716c; --rule:#d9d3c5;
-  --accent:#1f6b52; --accent-ink:#fff; --warn:#a4462b; --row:#f7f4ec;
+  --bg:#eef1ee; --paper:#ffffff; --ink:#17201c; --muted:#66706a; --faint:#9aa39d; --rule:#dde3de;
+  --accent:#17745a; --accent-2:#0f5a45; --accent-soft:#e3f1ec; --accent-ink:#ffffff;
+  --warn:#b3472a; --warn-soft:#fbece7; --row:#f7f9f7; --shadow:0 1px 2px rgba(20,40,30,.05),0 8px 24px rgba(20,40,30,.06);
   box-sizing:border-box;
   padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
-    --bg:#151816; --paper:#1d211f; --ink:#e7e4dc; --muted:#9aa19b; --rule:#343a36;
-    --accent:#4fb28c; --accent-ink:#0f1411; --warn:#e38b6d; --row:#232825;
+    --bg:#111513; --paper:#1a201d; --ink:#e6ebe7; --muted:#9ba69f; --faint:#6d7872; --rule:#2d3531;
+    --accent:#4cbf94; --accent-2:#6fd3ab; --accent-soft:#1d3129; --accent-ink:#0c1410;
+    --warn:#ec8e70; --warn-soft:#3a231c; --row:#1f2622; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
   }
 }
 :root[data-theme="dark"]{
-  --bg:#151816; --paper:#1d211f; --ink:#e7e4dc; --muted:#9aa19b; --rule:#343a36;
-  --accent:#4fb28c; --accent-ink:#0f1411; --warn:#e38b6d; --row:#232825;
+  --bg:#111513; --paper:#1a201d; --ink:#e6ebe7; --muted:#9ba69f; --faint:#6d7872; --rule:#2d3531;
+  --accent:#4cbf94; --accent-2:#6fd3ab; --accent-soft:#1d3129; --accent-ink:#0c1410;
+  --warn:#ec8e70; --warn-soft:#3a231c; --row:#1f2622; --shadow:0 1px 2px rgba(0,0,0,.3),0 8px 24px rgba(0,0,0,.25);
 }
 *,*::before,*::after{box-sizing:border-box}
-html{scroll-padding-top:env(safe-area-inset-top,0px)}
-body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif}
-.wrap{max-width:860px;margin:0 auto;padding:32px 20px 60px}
-header{border-bottom:2px solid var(--ink);padding-bottom:14px;margin-bottom:24px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
-h1{font:600 22px/1.2 "IBM Plex Mono",ui-monospace,monospace;margin:0;letter-spacing:-.01em}
-h1 span{color:var(--accent)}
-.sub{color:var(--muted);font-size:13px;margin:4px 0 0}
-.drop{border:1.5px dashed var(--rule);background:var(--paper);border-radius:6px;padding:34px 20px;text-align:center;cursor:pointer;transition:border-color .15s,background .15s}
-.drop:hover,.drop.over{border-color:var(--accent)}
-.drop strong{font-family:"IBM Plex Mono",monospace;font-weight:500}
-.drop small{display:block;color:var(--muted);margin-top:6px}
+html{height:100%;scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;min-height:100%;display:flex;flex-direction:column;background:var(--bg);color:var(--ink);
+  font:15px/1.55 "IBM Plex Sans",system-ui,-apple-system,"Segoe UI",sans-serif;-webkit-font-smoothing:antialiased}
+.mono{font-family:"IBM Plex Mono",ui-monospace,Menlo,Consolas,monospace}
+
+/* top bar */
+.bar{background:var(--paper);border-bottom:1px solid var(--rule)}
+.bar-in{max-width:960px;margin:0 auto;padding:14px 24px;display:flex;align-items:center;gap:12px}
+.logo{width:34px;height:34px;border-radius:8px;background:var(--accent);color:var(--accent-ink);display:grid;place-items:center;font:600 13px "IBM Plex Mono",monospace;flex-shrink:0}
+.brand b{display:block;font-size:14px;line-height:1.2}
+.brand span{font-size:12px;color:var(--muted)}
+
+main{flex:1;width:100%;max-width:960px;margin:0 auto;padding:36px 24px 48px}
+.hero h1{font:600 clamp(24px,4vw,32px)/1.15 "IBM Plex Sans",sans-serif;letter-spacing:-.02em;margin:0}
+.hero h1 em{font-style:normal;color:var(--accent)}
+.hero p{color:var(--muted);margin:8px 0 0;max-width:560px}
+
+.steps{display:flex;gap:8px;flex-wrap:wrap;margin:22px 0 22px;padding:0;list-style:none}
+.steps li{display:flex;align-items:center;gap:8px;font-size:13px;color:var(--muted);background:var(--paper);border:1px solid var(--rule);border-radius:999px;padding:6px 14px 6px 6px}
+.steps li i{font-style:normal;width:22px;height:22px;border-radius:50%;display:grid;place-items:center;background:var(--row);border:1px solid var(--rule);font:600 11px "IBM Plex Mono",monospace;color:var(--muted)}
+.steps li.on{color:var(--ink);border-color:var(--accent)}
+.steps li.on i{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.steps li.done i{background:var(--accent-soft);border-color:var(--accent);color:var(--accent)}
+
+/* drop zone */
+.drop{display:block;background:var(--paper);border:2px dashed var(--rule);border-radius:14px;padding:44px 24px;text-align:center;cursor:pointer;
+  transition:border-color .15s,background .15s,transform .15s;box-shadow:var(--shadow)}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop.over{transform:scale(1.005)}
+.drop.compact{padding:18px 24px;display:flex;align-items:center;justify-content:center;gap:14px;text-align:left}
+.drop.compact .ico{width:40px;height:40px;margin:0}
+.drop.compact .ico svg{width:20px;height:20px}
+.drop.compact .t{font-size:15px}
+.ico{width:64px;height:64px;margin:0 auto 14px;border-radius:16px;background:var(--accent-soft);color:var(--accent);display:grid;place-items:center}
+.drop .t{font-weight:600;font-size:17px}
+.drop .s{color:var(--muted);font-size:13px;margin-top:4px}
+.drop .btn{margin-top:18px}
+.drop.compact .btn{margin:0 0 0 auto}
 input[type=file]{display:none}
-.card{background:var(--paper);border:1px solid var(--rule);border-radius:6px;margin-top:22px}
-.meta{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:0;border-bottom:1px solid var(--rule)}
-.meta div{padding:12px 16px;border-right:1px solid var(--rule)}
+
+.msg{margin:14px 2px 0;font-size:13.5px;min-height:1.3em;color:var(--muted)}
+.msg.err{color:var(--warn);background:var(--warn-soft);padding:10px 14px;border-radius:8px}
+.msg.ok{color:var(--accent)}
+
+/* result card */
+.card{background:var(--paper);border:1px solid var(--rule);border-radius:14px;margin-top:20px;box-shadow:var(--shadow);overflow:hidden}
+.meta{display:grid;grid-template-columns:1fr 1fr 2fr;border-bottom:1px solid var(--rule)}
+@media (max-width:640px){.meta{grid-template-columns:1fr 1fr}.meta div:last-child{grid-column:1/-1;border-top:1px solid var(--rule)}}
+.meta div{padding:14px 18px;border-right:1px solid var(--rule);min-width:0}
 .meta div:last-child{border-right:0}
-.meta label{display:block;font:500 11px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
-.meta span{font-family:"IBM Plex Mono",monospace;font-size:14px;word-break:break-word}
-.opts{display:flex;flex-wrap:wrap;gap:14px 24px;align-items:center;padding:12px 16px;border-bottom:1px solid var(--rule);font-size:13px}
-.opts input[type=text]{width:70px}
+.meta label{display:block;font:500 10.5px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);margin-bottom:2px}
+.meta span{font:500 14.5px "IBM Plex Mono",monospace;word-break:break-word}
+
+.opts{display:flex;flex-wrap:wrap;gap:12px 22px;align-items:center;padding:12px 18px;border-bottom:1px solid var(--rule);background:var(--row);font-size:13.5px}
+.opts label{display:flex;align-items:center;gap:8px;cursor:pointer}
+.opts .sep{flex:1}
+.prio{display:flex;align-items:center;gap:8px}
+input[type=checkbox]{accent-color:var(--accent);width:16px;height:16px;margin:0}
+
 .scroll{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13.5px}
-th{font:500 11px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);text-align:left;padding:10px 12px;border-bottom:1px solid var(--rule);white-space:nowrap}
-td{padding:6px 12px;border-bottom:1px solid var(--rule);vertical-align:middle}
-tr:nth-child(even) td{background:var(--row)}
-tr.off td{opacity:.4}
-td.desc{color:var(--muted);min-width:200px}
-td.num{text-align:right;font-family:"IBM Plex Mono",monospace;white-space:nowrap}
-input.cell,.opts input[type=text]{font:14px "IBM Plex Mono",monospace;color:var(--ink);background:transparent;border:1px solid transparent;border-bottom-color:var(--rule);padding:3px 4px;border-radius:2px;width:100%;min-width:60px}
-input.cell:focus,.opts input[type=text]:focus{outline:none;border-color:var(--accent)}
-input.qty{width:70px}
-.foot{display:flex;justify-content:space-between;align-items:center;gap:12px;flex-wrap:wrap;padding:14px 16px}
-.total{font-family:"IBM Plex Mono",monospace;font-size:13px;color:var(--muted)}
-.total b{color:var(--ink)}
-.total .bad{color:var(--warn)}
-button{font:500 14px "IBM Plex Sans",sans-serif;border:0;border-radius:4px;padding:10px 18px;cursor:pointer}
+table{width:100%;border-collapse:collapse;font-size:14px}
+th{font:500 10.5px "IBM Plex Mono",monospace;text-transform:uppercase;letter-spacing:.08em;color:var(--faint);text-align:left;padding:12px 14px;border-bottom:1px solid var(--rule);white-space:nowrap}
+th.r,td.r{text-align:right}
+td{padding:7px 14px;border-bottom:1px solid var(--rule);vertical-align:middle}
+tbody tr:last-child td{border-bottom:0}
+tbody tr:hover td{background:var(--row)}
+tr.off td{opacity:.42}
+td.desc{color:var(--muted);min-width:220px;font-size:13.5px}
+td.num{font-family:"IBM Plex Mono",monospace;white-space:nowrap}
+.tag{display:inline-block;font:500 10px "IBM Plex Mono",monospace;letter-spacing:.05em;padding:1px 6px;border-radius:4px;background:var(--warn-soft);color:var(--warn);margin-left:6px;vertical-align:1px}
+input.cell,.prio input{font:14px "IBM Plex Mono",monospace;color:var(--ink);background:var(--paper);border:1px solid var(--rule);padding:6px 8px;border-radius:6px;width:100%;min-width:70px}
+input.cell:focus,.prio input:focus{outline:none;border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+input.sm,.prio input{width:76px;min-width:0}
+
+.foot{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 18px;border-top:1px solid var(--rule)}
+.recon{display:flex;gap:18px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+.recon b{font:600 14px "IBM Plex Mono",monospace;color:var(--ink);display:block}
+.pill{display:inline-flex;align-items:center;gap:6px;font:500 12px "IBM Plex Sans",sans-serif;padding:4px 10px;border-radius:999px;align-self:center}
+.pill.ok{background:var(--accent-soft);color:var(--accent)}
+.pill.bad{background:var(--warn-soft);color:var(--warn)}
+
+.btn{font:600 14px "IBM Plex Sans",sans-serif;border:0;border-radius:8px;padding:11px 20px;cursor:pointer;display:inline-flex;align-items:center;gap:8px;transition:background .15s,transform .05s}
+.btn:active{transform:translateY(1px)}
 .primary{background:var(--accent);color:var(--accent-ink)}
-.primary:disabled{opacity:.5;cursor:default}
-.ghost{background:transparent;color:var(--muted);border:1px solid var(--rule)}
-.msg{margin-top:14px;font-size:13px;min-height:1.2em}
-.msg.err{color:var(--warn)}
-.hidden{display:none}
+.primary:hover{background:var(--accent-2)}
+.primary:disabled{opacity:.45;cursor:default}
+.ghost{background:var(--paper);color:var(--ink);border:1px solid var(--rule);padding:6px 12px;font-weight:500;font-size:13px}
+.ghost:hover{border-color:var(--accent)}
+.hidden{display:none!important}
+
+footer{border-top:1px solid var(--rule);background:var(--paper)}
+.foot-in{max-width:960px;margin:0 auto;padding:16px 24px;display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;font-size:13px;color:var(--muted)}
+footer strong{color:var(--ink);font-weight:600}
 </style>
 </head>
 <body>
-<div class="wrap">
-  <header>
-    <div>
-      <h1>Quotation <span>→</span> Sales Order Import</h1>
-      <p class="sub">Upload a ProPharma / PSMS quotation PDF. Get the Productcode · Quantity · Piority sheet.</p>
-    </div>
-  </header>
+<div class="bar"><div class="bar-in">
+  <div class="logo">PS</div>
+  <div class="brand"><b>PSMS · ProPharma Maldives</b><span>Accounts tools</span></div>
+</div></div>
 
-  <label class="drop" id="drop">
-    <input type="file" id="file" accept="application/pdf">
-    <strong>Drop quotation PDF here</strong>
-    <small>or tap to choose a file — it's read in your browser, nothing is uploaded</small>
-  </label>
+<main>
+  <section class="hero">
+    <h1>Quotation <em>→</em> Sales Order Import</h1>
+    <p>Turn a quotation PDF into the Sales Order Product Import sheet (Productcode, Quantity, Piority) in a few seconds.</p>
+  </section>
+
+  <ol class="steps">
+    <li id="s1" class="on"><i>1</i>Upload PDF</li>
+    <li id="s2"><i>2</i>Review lines</li>
+    <li id="s3"><i>3</i>Download Excel</li>
+  </ol>
+
+  <div class="drop" id="drop" role="button" tabindex="0" aria-label="Choose quotation PDF">
+    <input type="file" id="file" accept="application/pdf,.pdf">
+    <div class="ico"><svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M14 3H7a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h10a2 2 0 0 0 2-2V8z"/><path d="M14 3v5h5"/><path d="M12 18v-6"/><path d="m9 15 3-3 3 3"/></svg></div>
+    <div>
+      <div class="t" id="dropT">Drop your quotation PDF here</div>
+      <div class="s" id="dropS">or click to browse · read in your browser, never uploaded</div>
+    </div>
+    <span class="btn primary" id="browse">Choose PDF</span>
+  </div>
   <div class="msg" id="msg"></div>
 
   <section class="card hidden" id="result">
@@ -94,31 +162,47 @@ button{font:500 14px "IBM Plex Sans",sans-serif;border:0;border-radius:4px;paddi
     </div>
     <div class="opts">
       <label><input type="checkbox" id="incService"> Include SERVICE / freight lines</label>
-      <label>Priority for all rows: <input type="text" id="prioAll" placeholder="blank"></label>
-      <button class="ghost" id="applyPrio" type="button">Apply</button>
+      <span class="sep"></span>
+      <div class="prio">Priority for all rows <input type="text" id="prioAll" placeholder="blank"> <button class="btn ghost" id="applyPrio" type="button">Apply</button></div>
     </div>
     <div class="scroll">
       <table>
-        <thead><tr><th></th><th>Productcode</th><th>Description</th><th>Quantity</th><th>Piority</th><th style="text-align:right">Amount</th></tr></thead>
+        <thead><tr><th style="width:36px"></th><th>Productcode</th><th>Description</th><th>Quantity</th><th>Piority</th><th class="r">Amount</th></tr></thead>
         <tbody id="rows"></tbody>
       </table>
     </div>
     <div class="foot">
-      <div class="total" id="total"></div>
-      <button class="primary" id="dl" type="button">Download Excel</button>
+      <div class="recon" id="recon"></div>
+      <button class="btn primary" id="dl" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3v12"/><path d="m7 10 5 5 5-5"/><path d="M5 21h14"/></svg>
+        Download Excel
+      </button>
     </div>
   </section>
-</div>
+</main>
+
+<footer><div class="foot-in">
+  <span>Developed by <strong>Dilantha Chithana</strong></span>
+  <span>PSMS · Accounts Department</span>
+</div></footer>
 
 <script>
 pdfjsLib.GlobalWorkerOptions.workerSrc = "https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js";
 
 const $ = id => document.getElementById(id);
-let items = [], meta = {};
+let items = [], meta = {}, downloadsNs = null;
 
+// Inside claude.ai, file saves go through the viewer; on a normal site we fall back to a plain download.
+(async () => { try { if (window.claude && claude.use) downloadsNs = await claude.use("downloads"); } catch (e) {} })();
 
 const num = s => parseFloat(String(s).replace(/,/g, "")) || 0;
 const fmt = n => n.toLocaleString("en-US", {minimumFractionDigits: 2, maximumFractionDigits: 2});
+
+function setStep(n) {
+  ["s1","s2","s3"].forEach((id, i) => {
+    const el = $(id); el.className = i + 1 < n ? "done" : i + 1 === n ? "on" : "";
+  });
+}
 
 async function pdfLines(buf) {
   const pdf = await pdfjsLib.getDocument({data: buf}).promise;
@@ -172,19 +256,19 @@ function render() {
   $("mDate").textContent = meta.date || "—";
   $("mSubj").textContent = meta.subject || "—";
   const tb = $("rows"); tb.innerHTML = "";
-  items.forEach((it, i) => {
+  items.forEach(it => {
     const tr = document.createElement("tr");
     if (!it.on) tr.className = "off";
-    tr.innerHTML = `<td><input type="checkbox" ${it.on ? "checked" : ""} data-k="on"></td>
+    tr.innerHTML = `<td><input type="checkbox" ${it.on ? "checked" : ""} data-k="on" aria-label="Include line"></td>
       <td><input class="cell" data-k="code"></td>
-      <td class="desc"></td>
-      <td><input class="cell qty" inputmode="decimal" data-k="qty"></td>
-      <td><input class="cell qty" data-k="prio"></td>
-      <td class="num">${fmt(it.amount)}</td>`;
+      <td class="desc"><span></span>${it.service ? '<span class="tag">SERVICE</span>' : ""}</td>
+      <td><input class="cell sm" inputmode="decimal" data-k="qty"></td>
+      <td><input class="cell sm" data-k="prio"></td>
+      <td class="num r">${fmt(it.amount)}</td>`;
     tr.querySelector('[data-k=code]').value = it.code;
     tr.querySelector('[data-k=qty]').value = it.qty;
     tr.querySelector('[data-k=prio]').value = it.prio;
-    tr.querySelector('.desc').textContent = it.desc;
+    tr.querySelector('.desc span').textContent = it.desc;
     tr.querySelectorAll("input").forEach(inp => inp.addEventListener("input", () => {
       const k = inp.dataset.k;
       if (k === "on") { it.on = inp.checked; tr.className = it.on ? "" : "off"; summary(); }
@@ -201,12 +285,13 @@ function render() {
 function summary() {
   const sum = items.reduce((s, x) => s + x.amount, 0);
   const n = items.filter(x => x.on).length;
-  let t = `<b>${n}</b> row${n === 1 ? "" : "s"} to export · lines total <b>${fmt(sum)}</b>`;
+  let h = `<div>Rows to export<b>${n}</b></div><div>Lines total<b>${fmt(sum)}</b></div>`;
   if (meta.total != null) {
     const ok = Math.abs(sum - meta.total) < 0.05;
-    t += ` · PDF total ${meta.currency || ""} <b class="${ok ? "" : "bad"}">${fmt(meta.total)}</b> ${ok ? "✓" : "— mismatch, check lines"}`;
+    h += `<div>PDF total<b>${meta.currency || ""} ${fmt(meta.total)}</b></div>`;
+    h += ok ? `<span class="pill ok">✓ Totals match</span>` : `<span class="pill bad">⚠ Mismatch — check lines</span>`;
   }
-  $("total").innerHTML = t;
+  $("recon").innerHTML = h;
   $("dl").disabled = n === 0;
 }
 
@@ -218,28 +303,29 @@ async function handle(file) {
     if (!res.items.length) throw new Error("No item lines found. Is this a quotation with a CODE / DESCRIPTION / QTY / RATE / AMOUNT table?");
     meta = res.meta; meta.file = file.name; items = res.items;
     render();
-    msg.textContent = `Found ${items.length} line${items.length === 1 ? "" : "s"} in ${file.name}.`;
+    const d = $("drop"); d.classList.add("compact");
+    $("dropT").textContent = file.name;
+    $("dropS").textContent = "Drop another PDF to replace";
+    $("browse").textContent = "Choose another";
+    setStep(2);
+    msg.className = "msg ok"; msg.textContent = `Found ${items.length} line${items.length === 1 ? "" : "s"}.`;
   } catch (e) {
     msg.className = "msg err"; msg.textContent = e.message || String(e);
-    $("result").classList.add("hidden");
+    $("result").classList.add("hidden"); setStep(1);
   }
 }
 
-$("file").addEventListener("change", e => { if (e.target.files[0]) handle(e.target.files[0]); e.target.value = ""; });
-const drop = $("drop");
+const drop = $("drop"), fileIn = $("file");
+drop.addEventListener("click", () => fileIn.click());
+drop.addEventListener("keydown", e => { if (e.key === "Enter" || e.key === " ") { e.preventDefault(); fileIn.click(); } });
+fileIn.addEventListener("click", e => e.stopPropagation());
+fileIn.addEventListener("change", e => { if (e.target.files[0]) handle(e.target.files[0]); e.target.value = ""; });
 ["dragenter","dragover"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.add("over"); }));
 ["dragleave","drop"].forEach(ev => drop.addEventListener(ev, e => { e.preventDefault(); drop.classList.remove("over"); }));
 drop.addEventListener("drop", e => { const f = e.dataTransfer.files[0]; if (f) handle(f); });
 
-$("incService").addEventListener("change", e => {
-  items.forEach(x => { if (x.service) x.on = e.target.checked; });
-  render();
-});
-$("applyPrio").addEventListener("click", () => {
-  const v = $("prioAll").value.trim();
-  items.forEach(x => x.prio = v);
-  render();
-});
+$("incService").addEventListener("change", e => { items.forEach(x => { if (x.service) x.on = e.target.checked; }); render(); });
+$("applyPrio").addEventListener("click", () => { const v = $("prioAll").value.trim(); items.forEach(x => x.prio = v); render(); });
 
 $("dl").addEventListener("click", async () => {
   const rows = [["Productcode", "Quantity", "Piority"]];
@@ -256,12 +342,20 @@ $("dl").addEventListener("click", async () => {
   const tag = (meta.no || meta.file || "quotation").replace(/\.pdf$/i, "").replace(/[\/\\:*?"<>|\s]+/g, "-");
   const filename = `Sales_Order_Import_${tag}.xlsx`;
   const blob = new Blob([buf], {type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet"});
-  const msg = $("msg"); msg.className = "msg";
+  const msg = $("msg");
+  if (downloadsNs) {
+    try { await downloadsNs.save({filename, data: blob}); msg.className = "msg ok"; msg.textContent = "Saved " + filename; setStep(3); }
+    catch (e) {
+      if (e && e.code === "declined") { msg.className = "msg"; msg.textContent = "Download cancelled."; }
+      else { msg.className = "msg err"; msg.textContent = "Couldn't save: " + (e && e.message || e); }
+    }
+  } else {
     const a = document.createElement("a");
     a.href = URL.createObjectURL(blob); a.download = filename;
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 2000);
-    msg.textContent = "Downloaded " + filename;
+    msg.className = "msg ok"; msg.textContent = "Downloaded " + filename; setStep(3);
+  }
 });
 </script>
 </body>
